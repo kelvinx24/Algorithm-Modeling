@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-public class BubbleSort : MonoBehaviour
+public class BubbleSortAlgorithm : MonoBehaviour
 {
     public GameObject[] bars; // Assign these in the Inspector
     private bool advanceStep = false;
