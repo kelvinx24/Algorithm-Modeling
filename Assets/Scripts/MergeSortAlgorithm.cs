@@ -4,12 +4,56 @@ using System.Collections.Generic;
 
 public class MergeSortAlgorithm : MonoBehaviour
 {
-    public GameObject[] arrayToSort;
+    public List<GameObject> arrayToSort;
+
+    private List<GameObject> visualizers;
+
+    public int sortItemsAmount = 1;
+
+    public GameObject sortPrefab;
+
     private bool stepReady = false;
+
+    private int spacing = 2;
+
+    private int overallLeft = 0;
+    
+    private int overallRight = 0;
+
+    private System.Random rand;
 
     void Start()
     {
-        StartCoroutine(MergeSortCoroutine(arrayToSort));
+        rand = new System.Random();
+        SpawnStarting();
+        overallRight = arrayToSort.Count - 1;
+
+        StartCoroutine(MergeSortCoroutine(arrayToSort.ToArray()));
+    }
+
+    void SpawnStarting()
+    {
+        for (int i = 0; i < sortItemsAmount; i++)
+        {
+            Vector3 pos = new Vector3(spacing * i, 0, 0);
+            GameObject spawnedObject = Instantiate(sortPrefab);
+            spawnedObject.transform.position = pos;
+
+            int objYScale = Random.Range(1, 8);
+            spawnedObject.transform.localScale = new Vector3(1, objYScale, 1);
+
+            arrayToSort.Add(spawnedObject);
+
+            /*
+            Vector3 visPos = pos + new Vector3(0, 5, 0);
+            GameObject vis = Instantiate(sortPrefab);
+            vis.SetActive(false);
+            vis.transform.localPosition = visPos;
+            vis.transform.localScale = new Vector3(1, objYScale, 1);
+
+            visualizers.Add(vis);
+            */
+        }
     }
 
     void Update()
@@ -29,7 +73,7 @@ public class MergeSortAlgorithm : MonoBehaviour
         // Reposition sorted result
         for (int i = 0; i < result.Length; i++)
         {
-            result[i].transform.position = new Vector3(i, 0, 0);
+            result[i].transform.position = new Vector3(i * spacing, 0, 0);
             result[i].GetComponent<Renderer>().material.color = Color.green;
         }
     }
@@ -38,9 +82,11 @@ public class MergeSortAlgorithm : MonoBehaviour
     {
         if (unsorted.Length <= 1)
         {
+            ResetAndColorSelected(unsorted, Color.yellow);
             callback(unsorted);
             yield break;
         }
+
 
         int mid = unsorted.Length / 2;
         GameObject[] left = new GameObject[mid];
@@ -51,15 +97,9 @@ public class MergeSortAlgorithm : MonoBehaviour
         System.Array.Copy(unsorted, mid, right, 0, right.Length);
 
         // Color left and right halves for visualization
-        for (int i = 0; i < left.Length; i++)
-        {
-            left[i].GetComponent<Renderer>().material.color = Color.red;
-        }
-
-        for (int i = 0; i < right.Length; i++)
-        {
-            right[i].GetComponent<Renderer>().material.color = Color.blue;
-        }
+        ColorSelected(arrayToSort.ToArray(), Color.white);
+        ColorSelected(left, Color.red);
+        ColorSelected(right, Color.blue);
 
 
         yield return WaitForStep();
@@ -71,12 +111,28 @@ public class MergeSortAlgorithm : MonoBehaviour
         // The callback is a lambda function that captures the sorted array
         // callback is called when the sorting is done
         // Either base case (first argument, as is) or merged is set to sortedLeft or sortedRight
+        int originalLeft = overallLeft;
+        int originalRight = overallRight;
+
+        overallRight = originalLeft + mid - 1;
+
+        Debug.Log("(LEFT) CURRENT LEFT: " + overallLeft + " CURRENT RIGHT: " + overallRight);
         yield return StartCoroutine(SortCoroutine(left, val => sortedLeft = val));
+        overallRight = originalRight;
+        yield return WaitForStep();
+        overallLeft = originalLeft + mid;
+        Debug.Log("(RIGHT) CURRENT LEFT: " + overallLeft + " CURRENT RIGHT: " + overallRight);
         yield return StartCoroutine(SortCoroutine(right, val => sortedRight = val));
+        overallLeft = originalLeft;
+        yield return WaitForStep();
+
 
         GameObject[] merged = null;
 
         // Merge the sorted halves, and set the merged array   
+        ColorSelected(arrayToSort.ToArray(), Color.white);
+        ColorSelected(left, Color.red);
+        ColorSelected(right, Color.blue);
         yield return StartCoroutine(MergeCoroutine(sortedLeft, sortedRight, val => merged = val));
 
         callback(merged);
@@ -86,10 +142,12 @@ public class MergeSortAlgorithm : MonoBehaviour
     {
         int leftIndex = 0, rightIndex = 0;
         GameObject[] merged = new GameObject[left.Length + right.Length];
+        GameObject[] visualizers = new GameObject[left.Length + right.Length];
+
+        int overallIdx = 0;
 
         for (int i = 0; i < merged.Length; i++)
         {
-            yield return WaitForStep();
 
             if (leftIndex < left.Length && rightIndex < right.Length)
             {
@@ -111,11 +169,50 @@ public class MergeSortAlgorithm : MonoBehaviour
                 merged[i] = right[rightIndex++];
             }
 
+
+            Vector3 currentMergedPosition; 
+            if (overallIdx < left.Length)
+            {
+                Debug.Log("Left: " + overallIdx);
+                currentMergedPosition = left[overallIdx].transform.position;
+            }
+            else
+            {
+                Debug.Log("Right: " + overallIdx);
+                currentMergedPosition = right[overallIdx - left.Length].transform.position;
+            }
+
+            currentMergedPosition = currentMergedPosition + new Vector3(0, 10, 0);
+ 
+
+            GameObject visualizer = Instantiate(merged[i].gameObject);
+            // Break material link
+            Renderer copyRenderer = visualizer.GetComponent<Renderer>();
+            if (copyRenderer != null)
+            {
+                copyRenderer.material = new Material(copyRenderer.material);
+            }
+
+            visualizer.transform.localPosition = currentMergedPosition;
+            visualizers[overallIdx] = visualizer;
+                
+            merged[i].GetComponent<Renderer>().material.color = Color.black;
+
             // Update visual position
-            merged[i].transform.position = new Vector3(i, 0, 0);
-            merged[i].GetComponent<Renderer>().material.color = Color.yellow;
+            overallIdx++;
+
+            //merged[i].transform.position = new Vector3(i * spacing, 0, 0);
+            //ResetAndColorSelected(merged, Color.black);
+
+            yield return WaitForStep();
         }
 
+        foreach (GameObject vis in visualizers)
+        {
+            vis.SetActive(false);
+        }
+
+        CorrectPositions(merged);
         callback(merged);
     }
 
@@ -125,5 +222,45 @@ public class MergeSortAlgorithm : MonoBehaviour
             yield return null;
 
         stepReady = false;
+    }
+
+    void ResetAndColorSelected(GameObject[] selectedObj, Color colorWith)
+    {
+        foreach (GameObject go in arrayToSort)
+        {
+            go.GetComponent<Renderer>().material.color = Color.white;
+        }
+        
+        foreach (GameObject go in selectedObj)
+        {
+            if (go != null)
+            {
+                go.GetComponent<Renderer>().material.color = colorWith;
+
+            }
+        }
+
+    }
+
+    void ColorSelected(GameObject[] selectedObjs, Color colorWith)
+    {
+        foreach (GameObject go in selectedObjs)
+        {
+            if (go != null)
+            {
+                go.GetComponent<Renderer>().material.color = colorWith;
+
+            }
+        }
+    }
+
+    void CorrectPositions(GameObject[] sortedObjs)
+    {
+        for (int i = 0; i < sortedObjs.Length; i++)
+        {
+            GameObject go = sortedObjs[i];
+
+            go.transform.localPosition = new Vector3((overallLeft + i) * spacing, 0, 0);
+        }
     }
 }
