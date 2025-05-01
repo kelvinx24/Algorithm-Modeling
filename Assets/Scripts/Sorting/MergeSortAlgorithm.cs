@@ -2,25 +2,13 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
-public class MergeSortAlgorithm : MonoBehaviour
+public class MergeSortAlgorithm : SortAlgorithm
 {
-    public List<GameObject> arrayToSort;
-
     private List<GameObject> visualizers;
 
-    public int sortItemsAmount = 1;
-
-    public GameObject sortPrefab;
-
-    private bool stepReady = false;
-
-    private int spacing = 2;
-
-    private int overallLeft = 0;
+    private int overallLeft = 0; // Left index for the left half
     
-    private int overallRight = 0;
-
-    private System.Random rand;
+    private int overallRight = 0; // Right index for the right half
 
     void Start()
     {
@@ -28,10 +16,11 @@ public class MergeSortAlgorithm : MonoBehaviour
         SpawnStarting();
         overallRight = arrayToSort.Count - 1;
 
-        StartCoroutine(MergeSortCoroutine(arrayToSort.ToArray()));
+        StartCoroutine(StartSort(arrayToSort.ToArray()));
     }
 
-    void SpawnStarting()
+    // Revamp this method for better performance
+    void SpawnStartingUnique()
     {
         for (int i = 0; i < sortItemsAmount; i++)
         {
@@ -61,11 +50,11 @@ public class MergeSortAlgorithm : MonoBehaviour
         // Wait for user input (e.g., space key)
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            stepReady = true;
+            advanceStep = true;
         }
     }
 
-    IEnumerator MergeSortCoroutine(GameObject[] unsorted)
+    protected override IEnumerator StartSort(GameObject[] unsorted)
     {
         GameObject[] result = null;
         yield return StartCoroutine(SortCoroutine(unsorted, val => result = val));
@@ -78,6 +67,12 @@ public class MergeSortAlgorithm : MonoBehaviour
         }
     }
 
+    /**
+     * Merge Sort Algorithm
+     * Recursively divide the array into halves until each half has one element
+     * Merge the sorted halves back together
+     */
+    // The callback is a lambda function that captures the sorted array and sets it to result, sortedLeft, or sortedRight
     IEnumerator SortCoroutine(GameObject[] unsorted, System.Action<GameObject[]> callback)
     {
         if (unsorted.Length <= 1)
@@ -116,12 +111,10 @@ public class MergeSortAlgorithm : MonoBehaviour
 
         overallRight = originalLeft + mid - 1;
 
-        Debug.Log("(LEFT) CURRENT LEFT: " + overallLeft + " CURRENT RIGHT: " + overallRight);
         yield return StartCoroutine(SortCoroutine(left, val => sortedLeft = val));
         overallRight = originalRight;
         yield return WaitForStep();
         overallLeft = originalLeft + mid;
-        Debug.Log("(RIGHT) CURRENT LEFT: " + overallLeft + " CURRENT RIGHT: " + overallRight);
         yield return StartCoroutine(SortCoroutine(right, val => sortedRight = val));
         overallLeft = originalLeft;
         yield return WaitForStep();
@@ -149,6 +142,7 @@ public class MergeSortAlgorithm : MonoBehaviour
         for (int i = 0; i < merged.Length; i++)
         {
 
+            // Compare the left index object with the right index object
             if (leftIndex < left.Length && rightIndex < right.Length)
             {
                 if (left[leftIndex].transform.localScale.y <= right[rightIndex].transform.localScale.y)
@@ -160,6 +154,7 @@ public class MergeSortAlgorithm : MonoBehaviour
                     merged[i] = right[rightIndex++];
                 }
             }
+            // If one of the arrays is empty, add the remaining elements from the other array
             else if (leftIndex < left.Length)
             {
                 merged[i] = left[leftIndex++];
@@ -169,16 +164,15 @@ public class MergeSortAlgorithm : MonoBehaviour
                 merged[i] = right[rightIndex++];
             }
 
-
+            // Instantiate a visualizer for the merged object
+            // currentMergedPosition is the position of the visualizer starting from the leftmost object
             Vector3 currentMergedPosition; 
             if (overallIdx < left.Length)
             {
-                Debug.Log("Left: " + overallIdx);
                 currentMergedPosition = left[overallIdx].transform.position;
             }
             else
             {
-                Debug.Log("Right: " + overallIdx);
                 currentMergedPosition = right[overallIdx - left.Length].transform.position;
             }
 
@@ -196,17 +190,16 @@ public class MergeSortAlgorithm : MonoBehaviour
             visualizer.transform.localPosition = currentMergedPosition;
             visualizers[overallIdx] = visualizer;
                 
+            // Set the color of the visualizer to black
             merged[i].GetComponent<Renderer>().material.color = Color.black;
 
             // Update visual position
             overallIdx++;
 
-            //merged[i].transform.position = new Vector3(i * spacing, 0, 0);
-            //ResetAndColorSelected(merged, Color.black);
-
             yield return WaitForStep();
         }
 
+        // Deactivate all visualizers
         foreach (GameObject vis in visualizers)
         {
             vis.SetActive(false);
@@ -216,44 +209,8 @@ public class MergeSortAlgorithm : MonoBehaviour
         callback(merged);
     }
 
-    IEnumerator WaitForStep()
-    {
-        while (!stepReady)
-            yield return null;
-
-        stepReady = false;
-    }
-
-    void ResetAndColorSelected(GameObject[] selectedObj, Color colorWith)
-    {
-        foreach (GameObject go in arrayToSort)
-        {
-            go.GetComponent<Renderer>().material.color = Color.white;
-        }
-        
-        foreach (GameObject go in selectedObj)
-        {
-            if (go != null)
-            {
-                go.GetComponent<Renderer>().material.color = colorWith;
-
-            }
-        }
-
-    }
-
-    void ColorSelected(GameObject[] selectedObjs, Color colorWith)
-    {
-        foreach (GameObject go in selectedObjs)
-        {
-            if (go != null)
-            {
-                go.GetComponent<Renderer>().material.color = colorWith;
-
-            }
-        }
-    }
-
+    // Correct the positions of the sorted objects - not part of the merge sort algorithm normally 
+    // but needed for the visualization
     void CorrectPositions(GameObject[] sortedObjs)
     {
         for (int i = 0; i < sortedObjs.Length; i++)
