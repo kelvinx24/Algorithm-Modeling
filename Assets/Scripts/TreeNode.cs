@@ -1,8 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 
-public abstract class TreeNode<T>
+public class TreeNode<T>
 {
     public TreeNode<T> parent;
 
@@ -11,6 +12,8 @@ public abstract class TreeNode<T>
     public GameObject representation;
 
     private List<GameObject> edges = new List<GameObject>();
+
+    public int depth = 0;
 
 
     public void addChild(TreeNode<T> child)
@@ -24,6 +27,7 @@ public abstract class TreeNode<T>
 
         // Calculate position of child
         child.representation.transform.parent = representation.transform;
+        child.depth = depth + 1;
 
         // Add and configure edge
         if (edgePrefab != null)
@@ -40,11 +44,14 @@ public abstract class TreeNode<T>
 
     private void PositionChildren()
     {
-        float verticalOffset = -1.5f; // Distance below the parent
-        float horizontalSpacing = 2.0f; // Horizontal space between children
+        float verticalOffset = -4f; // Distance below the parent
+        float horizontalSpacing = 12.0f; // Horizontal space between children
+        float spacingScale = Mathf.Pow(0.38f, depth); 
 
         int count = children.Count;
-        float totalWidth = (count - 1) * horizontalSpacing;
+        float totalWidth = (count - 1) * horizontalSpacing * spacingScale;
+
+
 
         for (int i = 0; i < count; i++)
         {
@@ -53,7 +60,7 @@ public abstract class TreeNode<T>
             {
                 // Center the children around x = 0
                 // Calculate new leftest position then add by current object index * spacing
-                float x = -totalWidth / 2f + i * horizontalSpacing;
+                float x = -totalWidth / 2f + i * horizontalSpacing * spacingScale;
                 float y = verticalOffset;
 
                 Vector3 childPos = new Vector3(x, y, 0f);
@@ -63,19 +70,26 @@ public abstract class TreeNode<T>
                 {
                     GameObject edge = edges[i];
 
-                    Vector3 parentGlobalPos = edge.transform.position;
+                    Vector3 parentGlobalPos = representation.transform.position;
                     Vector3 childGlobalPos = child.representation.transform.position;
 
                     Vector3 edgeDirection = childGlobalPos - parentGlobalPos;
                     float edgeLength = edgeDirection.magnitude;
                     Vector3 edgeCenter = parentGlobalPos + edgeDirection / 2;
 
-                    edge.transform.localPosition = edgeCenter;
+                    edge.transform.position = edgeCenter;
                     edge.transform.up = edgeDirection.normalized;
-                    edge.transform.localScale = new Vector3(1, edgeLength / 2, 1);
+
+                    int lengthFactor = (int)(representation.transform.localScale.y * 2);
+                    edge.transform.localScale = new Vector3(0.05f, edgeLength / lengthFactor, 0.05f);
                 }
+
+                // Recursively position the children of this child node
+                child.PositionChildren();
             }
         }
+
+
     }
 
 }
