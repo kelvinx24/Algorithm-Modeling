@@ -8,19 +8,10 @@ public class TrinomeTiling : MonoBehaviour
     private int tileID = 1;
     private Color[] colorPallete = { Color.red, Color.green, Color.blue, Color.yellow, Color.cyan, Color.magenta };
 
+    private Dictionary<(int, int), int> tileIDMap = new Dictionary<(int, int), int>();
+    private Dictionary<int, Color> colorMap = new Dictionary<int, Color>();
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
+    
     public void DoTiling(int startR, int startC, int size, int defectR, int defectC)
     {
         int halfSize = size / 2;
@@ -34,39 +25,56 @@ public class TrinomeTiling : MonoBehaviour
 
         // Create the trinome for the three quadrants
         int t = tileID++;
-        Color currentColor = colorPallete[t % colorPallete.Length];
+        Color currentColor = Color.white;
+        (int, int)[] values;
 
         if (size == 2)
         {
             if (defectR == 0 && defectC == 0)
             {
-                boardSpawner.SetCellColor(centerTopRight.Item1, centerTopRight.Item2, currentColor);
-                boardSpawner.SetCellColor(centerBottomLeft.Item1, centerBottomLeft.Item2, currentColor);
-                boardSpawner.SetCellColor(centerBottomRight.Item1, centerBottomRight.Item2, currentColor);
+
+                values = new (int, int)[] { centerTopRight, centerBottomLeft, centerBottomRight };
+                tileIDMap[centerTopRight] = t;
+
+                tileIDMap[centerBottomLeft] = t;
+
+                tileIDMap[centerBottomRight] = t;
+
             }
             else if (defectR == 0 && defectC == 1)
             {
-                boardSpawner.SetCellColor(centerTopLeft.Item1, centerTopLeft.Item2, currentColor);
-                boardSpawner.SetCellColor(centerBottomLeft.Item1, centerBottomLeft.Item2, currentColor);
-                boardSpawner.SetCellColor(centerBottomRight.Item1, centerBottomRight.Item2, currentColor);
+                values = new (int, int)[] { centerTopLeft, centerBottomLeft, centerBottomRight };
+
+                tileIDMap[centerTopLeft] = t;
+
+                tileIDMap[centerBottomRight] = t;
+
+                tileIDMap[centerBottomLeft] = t;
             }
             else if (defectR == 1 && defectC == 0)
             {
-                boardSpawner.SetCellColor(centerTopLeft.Item1, centerTopLeft.Item2, currentColor);
-                boardSpawner.SetCellColor(centerTopRight.Item1, centerTopRight.Item2, currentColor);
-                boardSpawner.SetCellColor(centerBottomRight.Item1, centerBottomRight.Item2, currentColor);
+                values = new (int, int)[] { centerTopLeft, centerTopRight, centerBottomRight };
+                tileIDMap[centerTopLeft] = t;
+                tileIDMap[centerTopRight] = t;
+                tileIDMap[centerBottomRight] = t;
             }
             else
             {
-                boardSpawner.SetCellColor(centerTopLeft.Item1, centerTopLeft.Item2, currentColor);
-                boardSpawner.SetCellColor(centerTopRight.Item1, centerTopRight.Item2, currentColor);
-                boardSpawner.SetCellColor(centerBottomLeft.Item1, centerBottomLeft.Item2, currentColor);
+                values = new (int, int)[] { centerTopLeft, centerTopRight, centerBottomLeft };
+                tileIDMap[centerTopLeft] = t;
+                tileIDMap[centerTopRight] = t;
+                tileIDMap[centerBottomLeft] = t;
             }
+
+            // Set the color for the trinome
+            currentColor = DetermineColor(values, t);
+            for (int i = 0; i < values.Length; i++)
+            {
+                boardSpawner.SetCellColor(values[i].Item1, values[i].Item2, currentColor);
+            }
+
             return;
         }
-
-        Debug.Log($"Tiling: Start({startR}, {startC}), Size: {size}, Defect: ({defectR}, {defectC})");
-        Debug.Log($"Center: ({centerR}, {centerC})");
 
         // Determine the position of the defect
         //int defectQuadrantR = defectR < centerR ? 0 : 1;
@@ -74,9 +82,12 @@ public class TrinomeTiling : MonoBehaviour
 
         if (defectR == 0 && defectC == 0)
         {
-            boardSpawner.SetCellColor(centerTopRight.Item1, centerTopRight.Item2, currentColor);
-            boardSpawner.SetCellColor(centerBottomLeft.Item1, centerBottomLeft.Item2, currentColor);
-            boardSpawner.SetCellColor(centerBottomRight.Item1, centerBottomRight.Item2, currentColor);
+            values = new (int, int)[] { centerTopRight, centerBottomLeft, centerBottomRight };
+            tileIDMap[centerTopRight] = t;
+
+            tileIDMap[centerBottomLeft] = t;
+
+            tileIDMap[centerBottomRight] = t;
 
             DoTiling(startR, startC, halfSize, defectR, defectC);
             DoTiling(startR, centerC, halfSize, 1, 0);
@@ -85,20 +96,25 @@ public class TrinomeTiling : MonoBehaviour
         }
         else if (defectR == 0 && defectC == 1)
         {
-            boardSpawner.SetCellColor(centerTopLeft.Item1, centerTopLeft.Item2, currentColor);
-            boardSpawner.SetCellColor(centerBottomLeft.Item1, centerBottomLeft.Item2, currentColor);
-            boardSpawner.SetCellColor(centerBottomRight.Item1, centerBottomRight.Item2, currentColor);
+            values = new (int, int)[] { centerTopLeft, centerBottomLeft, centerBottomRight };
+
+            tileIDMap[centerTopLeft] = t;
+
+            tileIDMap[centerBottomRight] = t;
+
+            tileIDMap[centerBottomLeft] = t;
 
             DoTiling(startR, startC, halfSize, 1, 1);
             DoTiling(startR, centerC, halfSize, defectR, defectC);
             DoTiling(centerR, startC, halfSize, 0, 1);
             DoTiling(centerR, centerC, halfSize, 0, 0);
         }
-        else if (defectR == 1 && defectC == 0   )
+        else if (defectR == 1 && defectC == 0)
         {
-            boardSpawner.SetCellColor(centerTopLeft.Item1, centerTopLeft.Item2, currentColor);
-            boardSpawner.SetCellColor(centerTopRight.Item1, centerTopRight.Item2, currentColor);
-            boardSpawner.SetCellColor(centerBottomRight.Item1, centerBottomRight.Item2, currentColor);
+            values = new (int, int)[] { centerTopLeft, centerTopRight, centerBottomRight };
+            tileIDMap[centerTopLeft] = t;
+            tileIDMap[centerTopRight] = t;
+            tileIDMap[centerBottomRight] = t;
 
             DoTiling(startR, startC, halfSize, 1, 1);
             DoTiling(startR, centerC, halfSize, 1, 0);
@@ -107,9 +123,10 @@ public class TrinomeTiling : MonoBehaviour
         }
         else
         {
-            boardSpawner.SetCellColor(centerTopLeft.Item1, centerTopLeft.Item2, currentColor);
-            boardSpawner.SetCellColor(centerTopRight.Item1, centerTopRight.Item2, currentColor);
-            boardSpawner.SetCellColor(centerBottomLeft.Item1, centerBottomLeft.Item2, currentColor);
+            values = new (int, int)[] { centerTopLeft, centerTopRight, centerBottomLeft };
+            tileIDMap[centerTopLeft] = t;
+            tileIDMap[centerTopRight] = t;
+            tileIDMap[centerBottomLeft] = t;
 
             DoTiling(startR, startC, halfSize, 1, 1);
             DoTiling(startR, centerC, halfSize, 1, 0);
@@ -117,6 +134,57 @@ public class TrinomeTiling : MonoBehaviour
             DoTiling(centerR, centerC, halfSize, defectR, defectC);
         }
 
-        
+        currentColor = DetermineColor(values, t);
+        for (int i = 0; i < values.Length; i++)
+        {
+            boardSpawner.SetCellColor(values[i].Item1, values[i].Item2, currentColor);
+        }
+    }
+
+    private Color DetermineColor((int,int)[] positions, int currentID)
+    {
+        HashSet<Color> neighborColors = new HashSet<Color>();
+        (int, int)[] directions = { (0, 1), (1, 0), (0, -1), (-1, 0) }; // Up, Right, Down, Left
+
+
+        foreach (var position in positions)
+        {
+           foreach (var direction in directions) {
+
+                (int, int) neighborPos = (position.Item1 + direction.Item1, position.Item2 + direction.Item2);
+                if (tileIDMap.TryGetValue(neighborPos, out int neighborID))
+                {
+                    if (colorMap.ContainsKey(neighborID))
+                    {
+                        neighborColors.Add(colorMap[neighborID]); // Add the neighbor color to the list
+
+                    }
+                }
+                
+            }
+        }
+
+
+
+        List<Color> availableColors = new List<Color>();
+        foreach (Color color in colorPallete)
+        {
+            if (!neighborColors.Contains(color))
+            {
+                availableColors.Add(color);
+            }
+        }
+
+        if (availableColors.Count > 0)
+        {
+            int randomIndex = Random.Range(0, availableColors.Count);
+            Color selectedColor = availableColors[randomIndex];
+            colorMap[currentID] = selectedColor;
+            return selectedColor;
+        }
+        else
+        {
+            return Color.white; // Default color if no available colors
+        }
     }
 }
